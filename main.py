@@ -5,25 +5,24 @@ import random
 
 app = FastAPI()
 
-def calc_pick():
+@app.get("/", response_class=HTMLResponse)
+def home():
+
+```
 quota_over = round(random.uniform(1.40, 1.75), 2)
 prob_reale = 0.72
 value = (prob_reale * quota_over) - 1
 
-```
 if value > 0:
-    return "OVER 1.5", int(prob_reale * 100)
+    pick = "OVER 1.5"
+    conf = int(prob_reale * 100)
 else:
-    return "NO BET", 0
-```
+    pick = "NO BET"
+    conf = 0
 
-@app.get("/", response_class=HTMLResponse)
-def home():
-pick, conf = calc_pick()
 now = datetime.now().strftime("%H:%M:%S")
 
-```
-html = f"""
+return f"""
 <html>
 <head>
     <title>Virtual Live Predictor</title>
@@ -61,6 +60,4 @@ html = f"""
 </body>
 </html>
 """
-
-return HTMLResponse(content=html)
 ```
