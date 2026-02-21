@@ -1,37 +1,50 @@
-from fastapi import FastAPI  
-from fastapi.responses import HTMLResponse  
-from datetime import datetime  
-import random  
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+import random
+import requests
+import os
+import asyncio
 
-app = FastAPI()  
+app = FastAPI()
 
-@app.get("/", response_class=HTMLResponse)  
-def home():  
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
-    quota_over = round(random.uniform(1.40, 1.75), 2)  
-    prob_reale = 0.72  
-    value = (prob_reale * quota_over) - 1  
+def send_telegram(message):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    data = {
+        "chat_id": CHAT_ID,
+        "text": message
+    }
+    try:
+        requests.post(url, data=data, timeout=10)
+    except:
+        pass
 
-    if value > 0:  
-        pick = "OVER 1.5"  
-        conf = int(prob_reale * 100)  
-    else:  
-        pick = "NO BET"  
-        conf = 0  
+def generate_tip():
+    value = random.random()
 
-    now = datetime.now().strftime("%H:%M:%S")  
+    if value > 0.72:
+        return "🔥 VIRTUAL CALCIO: GIOCA OVER 1.5"
+    elif value < 0.18:
+        return "🔥 VIRTUAL CALCIO: GIOCA UNDER 2.5"
+    else:
+        return None
 
-    return f"""  
-    <html>  
-    <head>  
-        <title>Virtual Live Predictor</title>  
-        <meta http-equiv="refresh" content="180">  
-    </head>  
-    <body style="background:#0f172a;color:white;text-align:center;font-family:Arial;margin-top:100px;">  
-        <h1>PRONOSTICO LIVE</h1>  
-        <h2>{pick}</h2>  
-        <p>Probabilità: {conf}%</p>  
-        <p>Aggiornato: {now}</p>  
-    </body>  
-    </html>  
-    """  
+async def loop_predictions():
+    while True:
+        tip = generate_tip()
+        if tip:
+            send_telegram(tip)
+        await asyncio.sleep(180)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(loop_predictions())
+
+@app.get("/", response_class=HTMLResponse)
+def home():
+    return """
+    <h1>Bot Virtuali attivo</h1>
+    <p>Se stai leggendo questo, il sistema è collegato a Telegram.</p>
+    """
