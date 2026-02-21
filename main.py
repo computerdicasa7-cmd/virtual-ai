@@ -1,50 +1,48 @@
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
-import random
+from fastapi import FastAPI, Request
 import requests
 import os
-import asyncio
 
 app = FastAPI()
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
 
-def send_telegram(message):
+results = []
+
+def send(msg, chat_id):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    data = {
-        "chat_id": CHAT_ID,
-        "text": message
-    }
-    try:
-        requests.post(url, data=data, timeout=10)
-    except:
-        pass
+    requests.post(url, data={"chat_id": chat_id, "text": msg})
 
-def generate_tip():
-    value = random.random()
+def analyze(chat_id):
+    if len(results) < 6:
+        return
 
-    if value > 0.72:
-        return "🔥 VIRTUAL CALCIO: GIOCA OVER 1.5"
-    elif value < 0.18:
-        return "🔥 VIRTUAL CALCIO: GIOCA UNDER 2.5"
-    else:
-        return None
+    last8 = results[-8:]
+    goals = [int(x.split("-")[0]) + int(x.split("-")[1]) for x in last8]
+    avg = sum(goals)/len(goals)
 
-async def loop_predictions():
-    while True:
-        tip = generate_tip()
-        if tip:
-            send_telegram(tip)
-        await asyncio.sleep(180)
+    under_streak = 0
+    for g in reversed(goals):
+        if g <= 1:
+            under_streak += 1
+        else:
+            break
 
-@app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(loop_predictions())
+    high_goals_absent = all(g <= 2 for g in last8[-4:])
 
-@app.get("/", response_class=HTMLResponse)
-def home():
-    return """
-    <h1>Bot Virtuali attivo</h1>
-    <p>Se stai leggendo questo, il sistema è collegato a Telegram.</p>
-    """
+    if avg < 2.2 and (under_streak >= 2 or high_goals_absent):
+        send("📊 SNAI MITICO FOOTBALL\nFinestra favorevole!\nGIOCA ORA: OVER 1.5 sulla prossima partita", chat_id)
+
+@app.post("/")
+async def telegram_webhook(req: Request):
+    data = await req.json()
+
+    if "message" in data:
+        chat_id = data["message"]["chat"]["id"]
+        text = data["message"].get("text","")
+
+        if "-" in text:
+            results.append(text.strip())
+            analyze(chat_id)
+            send("Risultato registrato ✔️", chat_id)
+
+    return {"ok": True}
