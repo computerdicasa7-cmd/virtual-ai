@@ -5,7 +5,7 @@ import threading
 import time
 import re
 
-app = Flask(**name**)
+app = Flask(__name__)
 
 TOKEN = "8537405775:AAESPuTNwnEAIajnz00P1W6CaDeYo-L3YFs"
 CHAT_ID = "1451965962"
