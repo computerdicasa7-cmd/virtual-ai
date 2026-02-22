@@ -6,7 +6,7 @@ import threading
 import time
 import re
 
-app = Flask(__name__)
+app = Flask(name)
 
 TOKEN = "8537405775:AAESPuTNwnEAIajnz00P1W6CaDeYo-L3YFs"
 CHAT_ID = "1451965962"
@@ -26,22 +26,19 @@ pass
 
 def analizza_virtuali():
 global ultimo_risultato
+while True:
+try:
+r = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"})
+soup = BeautifulSoup(r.text, "html.parser")
+testo = soup.get_text()
+risultati = re.findall(r"\d-\d", testo)
 
 ```
-while True:
-    try:
-        r = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"})
-        soup = BeautifulSoup(r.text, "html.parser")
-
-        testo = soup.get_text()
-        risultati = re.findall(r"\d-\d", testo)
-
         if risultati:
             ultimo = risultati[0]
 
             if ultimo != ultimo_risultato:
                 ultimo_risultato = ultimo
-
                 gol = int(ultimo[0]) + int(ultimo[2])
 
                 if gol <= 2:
@@ -50,9 +47,7 @@ while True:
                     previsione = "GIOCA UNDER 3.5 nella prossima corsa"
 
                 manda_telegram(
-                    f"⚽ MITICO FOOTBALL SNAI\n"
-                    f"Ultimo risultato: {ultimo}\n"
-                    f"Consiglio: {previsione}"
+                    f"⚽ MITICO FOOTBALL SNAI\nUltimo risultato: {ultimo}\nConsiglio: {previsione}"
                 )
 
         time.sleep(120)
@@ -68,6 +63,6 @@ return "BOT VIRTUAL CALCIO ATTIVO"
 def start_bot():
 analizza_virtuali()
 
-if __name__ == "__main__":
+if **name** == "main":
 threading.Thread(target=start_bot, daemon=True).start()
 app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
