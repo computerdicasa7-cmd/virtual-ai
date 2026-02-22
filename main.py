@@ -66,7 +66,8 @@ return "BOT VIRTUAL CALCIO ATTIVO"
 def start_bot():
 analizza_virtuali()
 
-threading.Thread(target=start_bot).start()
 
-if name == "main":
+
+if **name** == "__main__":
+threading.Thread(target=start_bot, daemon=True).start()
 app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
