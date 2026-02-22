@@ -1,50 +1,73 @@
+from flask import Flask
 import requests
 from bs4 import BeautifulSoup
+import threading
 import time
+
+app = Flask(**name**)
 
 TOKEN = "8537405775:AAESPuTNwnEAIajnz00P1W6CaDeYo-L3YFs"
 CHAT_ID = "1451965962"
-
 URL = "https://www.snai.it/virtuali/ultimi-risultati/hgcals-5"
 
 ultimo_risultato = ""
 
 def manda_telegram(messaggio):
+try:
 requests.get(
 f"https://api.telegram.org/bot{TOKEN}/sendMessage",
 params={"chat_id": CHAT_ID, "text": messaggio}
 )
+except:
+pass
 
 def analizza():
 global ultimo_risultato
 
 ```
-r = requests.get(URL, headers={"User-Agent":"Mozilla/5.0"})
-soup = BeautifulSoup(r.text, "html.parser")
+while True:
+    try:
+        r = requests.get(URL, headers={"User-Agent":"Mozilla/5.0"})
+        soup = BeautifulSoup(r.text, "html.parser")
 
-partite = soup.find_all("div")
+        testo_pagina = soup.get_text()
 
-for p in partite:
-    testo = p.get_text()
+        # trova punteggi tipo 2-1 3-0 1-1
+        import re
+        risultati = re.findall(r"\d-\d", testo_pagina)
 
-    if "-" in testo and ":" in testo:
-        if testo != ultimo_risultato:
-            ultimo_risultato = testo
+        if risultati:
+            ultimo = risultati[0]
 
-            # ANALISI SEMPLICE
-            if "0-0" in testo or "1-0" in testo or "0-1" in testo:
-                previsione = "OVER 2.5 PROBABILE"
-            else:
-                previsione = "UNDER 3.5 PROBABILE"
+            if ultimo != ultimo_risultato:
+                ultimo_risultato = ultimo
 
-            manda_telegram(
-                f"Nuovo risultato Mitico Football:\n{texto}\n\nProssima giocata consigliata:\n{previsione}"
-            )
+                # logica previsione
+                gol = int(ultimo[0]) + int(ultimo[2])
+
+                if gol <= 2:
+                    previsione = "GIOCATA: OVER 2.5"
+                else:
+                    previsione = "GIOCATA: UNDER 3.5"
+
+                manda_telegram(
+                    f"MITICO FOOTBALL SNAI\nUltimo risultato: {ultimo}\nConsiglio prossima corsa:\n{previsione}"
+                )
+
+        time.sleep(120)
+
+    except:
+        time.sleep(60)
 ```
 
-while True:
-try:
+@app.route("/")
+def home():
+return "BOT MITICO FOOTBALL ATTIVO"
+
+def avvia_bot():
 analizza()
-time.sleep(120)
-except:
-time.sleep(60)
+
+threading.Thread(target=avvia_bot).start()
+
+if **name** == "**main**":
+app.run(host="0.0.0.0", port=10000)
