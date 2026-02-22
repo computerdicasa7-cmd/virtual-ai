@@ -1,2 +1,10 @@
 from flask import Flask
-app = Flask(__name__)
+
+app = Flask(**name**)
+
+@app.route("/")
+def home():
+return "FUNZIONA"
+
+if **name** == "**main**":
+app.run(host="0.0.0.0", port=10000)
