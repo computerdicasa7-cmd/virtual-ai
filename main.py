@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import threading
 import time
+import re
 
 app = Flask(**name**)
 
@@ -27,13 +28,10 @@ global ultimo_risultato
 ```
 while True:
     try:
-        r = requests.get(URL, headers={"User-Agent":"Mozilla/5.0"})
+        r = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"})
         soup = BeautifulSoup(r.text, "html.parser")
 
         testo_pagina = soup.get_text()
-
-        # trova punteggi tipo 2-1 3-0 1-1
-        import re
         risultati = re.findall(r"\d-\d", testo_pagina)
 
         if risultati:
@@ -42,7 +40,6 @@ while True:
             if ultimo != ultimo_risultato:
                 ultimo_risultato = ultimo
 
-                # logica previsione
                 gol = int(ultimo[0]) + int(ultimo[2])
 
                 if gol <= 2:
