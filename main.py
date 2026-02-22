@@ -1,48 +1,50 @@
-from fastapi import FastAPI, Request
 import requests
-import os
+from bs4 import BeautifulSoup
+import time
 
-app = FastAPI()
+TOKEN = "8537405775:AAESPuTNwnEAIajnz00P1W6CaDeYo-L3YFs"
+CHAT_ID = "1451965962"
 
-TOKEN = os.getenv("8537405775:AAESPuTNwnEAIajnz00P1W6CaDeYo-L3YFs")
+URL = "https://www.snai.it/virtuali/ultimi-risultati/hgcals-5"
 
-results = []
+ultimo_risultato = ""
 
-def send(msg, chat_id):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    requests.post(url, data={"chat_id": chat_id, "text": msg})
+def manda_telegram(messaggio):
+requests.get(
+f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+params={"chat_id": CHAT_ID, "text": messaggio}
+)
 
-def analyze(chat_id):
-    if len(results) < 6:
-        return
+def analizza():
+global ultimo_risultato
 
-    last8 = results[-8:]
-    goals = [int(x.split("-")[0]) + int(x.split("-")[1]) for x in last8]
-    avg = sum(goals)/len(goals)
+```
+r = requests.get(URL, headers={"User-Agent":"Mozilla/5.0"})
+soup = BeautifulSoup(r.text, "html.parser")
 
-    under_streak = 0
-    for g in reversed(goals):
-        if g <= 1:
-            under_streak += 1
-        else:
-            break
+partite = soup.find_all("div")
 
-    high_goals_absent = all(g <= 2 for g in last8[-4:])
+for p in partite:
+    testo = p.get_text()
 
-    if avg < 2.2 and (under_streak >= 2 or high_goals_absent):
-        send("📊 SNAI MITICO FOOTBALL\nFinestra favorevole!\nGIOCA ORA: OVER 1.5 sulla prossima partita", chat_id)
+    if "-" in testo and ":" in testo:
+        if testo != ultimo_risultato:
+            ultimo_risultato = testo
 
-@app.post("/")
-async def telegram_webhook(req: Request):
-    data = await req.json()
+            # ANALISI SEMPLICE
+            if "0-0" in testo or "1-0" in testo or "0-1" in testo:
+                previsione = "OVER 2.5 PROBABILE"
+            else:
+                previsione = "UNDER 3.5 PROBABILE"
 
-    if "message" in data:
-        chat_id = data["message"]["chat"]["id"]
-        text = data["message"].get("text","")
+            manda_telegram(
+                f"Nuovo risultato Mitico Football:\n{texto}\n\nProssima giocata consigliata:\n{previsione}"
+            )
+```
 
-        if "-" in text:
-            results.append(text.strip())
-            analyze(chat_id)
-            send("Risultato registrato ✔️", chat_id)
-
-    return {"ok": True}
+while True:
+try:
+analizza()
+time.sleep(120)
+except:
+time.sleep(60)
