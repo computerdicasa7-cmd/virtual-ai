@@ -1,14 +1,15 @@
-from flask import Flask, request
+from flask import Flask
 import requests
 import time
 import threading
+import re
 
 app = Flask(__name__)
 
 TOKEN = "8537405775:AAESPuTNwnEAIajnz00P1W6CaDeYo-L3YFs"
 CHAT_ID = "1451965962"
 
-ultimo_risultato = ""
+ultimo_risultato = None
 
 def controlla_virtuale():
     global ultimo_risultato
@@ -16,11 +17,9 @@ def controlla_virtuale():
     while True:
         try:
             url = "https://www.snai.it/virtuali/ultimi-risultati/hgcals-5"
-            r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
             testo = r.text
 
-            # cerca punteggi tipo 2-1, 3-0 ecc
-            import re
             risultati = re.findall(r'\d-\d', testo)
 
             if risultati:
@@ -32,27 +31,31 @@ def controlla_virtuale():
                     gol = int(risultato[0]) + int(risultato[2])
 
                     if gol <= 2:
-                        pronostico = "➡️ PROSSIMA: OVER 2.5"
+                        pronostico = "OVER 2.5"
                     else:
-                        pronostico = "➡️ PROSSIMA: UNDER 2.5"
+                        pronostico = "UNDER 2.5"
 
-                    messaggio = f"""⚽ SNAI MITICO FOOTBALL
+                    messaggio = f"⚽ SNAI MITICO FOOTBALL\nUltimo risultato: {risultato}\nConsiglio: {pronostico}"
 
-Ultimo risultato: {risultato}
+                    requests.get(
+                        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+                        params={"chat_id": CHAT_ID, "text": messaggio}
+                    )
 
-{pronostico}
-Giocare alla prossima corsa."""
-
-                    requests.get(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                                 params={"chat_id": CHAT_ID, "text": messaggio})
-
-        except:
-            pass
+        except Exception as e:
+            print("errore:", e)
 
         time.sleep(120)
 
-@app.route("/", methods=["GET"])
+
+@app.route("/")
 def home():
     return "BOT VIRTUAL CALCIO ATTIVO"
 
-threading.Thread(target=controlla_virtuale).start()
+
+def avvia_bot():
+    t = threading.Thread(target=controlla_virtuale)
+    t.daemon = True
+    t.start()
+
+avvia_bot()
