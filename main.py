@@ -13,40 +13,42 @@ ultimo_risultato = None
 def controlla_virtuale():
     global ultimo_risultato
     
+    session = requests.Session()
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Connection": "keep-alive"
+    }
+
     while True:
         try:
-            api = "https://www.snai.it/scommesse/virtuali/hub/last-results/hgcals-5"
-            r = requests.get(api, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
-            data = r.json()
+            url = "https://www.snai.it/virtuali/ultimi-risultati/hgcals-5"
 
-            partite = data["lastResults"]
+            r = session.get(url, headers=headers, timeout=25)
+            html = r.text
 
-            if partite:
-                partita = partite[0]
-                casa = partita["homeTeamName"]
-                ospite = partita["awayTeamName"]
-                gol_casa = partita["homeScore"]
-                gol_ospite = partita["awayScore"]
+            import re
+            risultati = re.findall(r'\b\d-\d\b', html)
 
-                risultato = f"{gol_casa}-{gol_ospite}"
+            if risultati:
+                risultato = risultati[0]
 
                 if risultato != ultimo_risultato:
                     ultimo_risultato = risultato
 
-                    totale = gol_casa + gol_ospite
+                    totale = int(risultato[0]) + int(risultato[2])
 
                     if totale <= 2:
-                        pronostico = "➡️ PROSSIMA: OVER 2.5"
+                        pronostico = "➡️ GIOCA OVER 2.5 ALLA PROSSIMA"
                     else:
-                        pronostico = "➡️ PROSSIMA: UNDER 2.5"
+                        pronostico = "➡️ GIOCA UNDER 2.5 ALLA PROSSIMA"
 
                     messaggio = f"""⚽ SNAI MITICO FOOTBALL
+Ultimo risultato: {risultato}
 
-{casa} vs {ospite}
-Risultato: {risultato}
-
-{pronostico}
-Gioca sulla prossima corsa."""
+{pronostico}"""
 
                     requests.get(
                         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
@@ -56,7 +58,8 @@ Gioca sulla prossima corsa."""
         except Exception as e:
             print("errore:", e)
 
-        time.sleep(90)
+        time.sleep(120)
+
 
 @app.route("/")
 def home():
