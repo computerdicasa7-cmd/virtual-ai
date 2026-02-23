@@ -1,74 +1,48 @@
-from flask import Flask
 import requests
 import time
+from flask import Flask
 import threading
-import re
-
-app = Flask(__name__)
 
 TOKEN = "8537405775:AAESPuTNwnEAIajnz00P1W6CaDeYo-L3YFs"
 CHAT_ID = "1451965962"
 
-ultimo_risultato = None
-def controlla_virtuale():
-    global ultimo_risultato
-    
-    session = requests.Session()
+app = Flask(name)
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Connection": "keep-alive"
-    }
+def manda_messaggio(testo):
+url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+data = {"chat_id": CHAT_ID, "text": testo}
+try:
+requests.post(url, data=data, timeout=10)
+except:
+pass
 
-    while True:
-        try:
-            url = "https://www.snai.it/virtuali/ultimi-risultati/hgcals-5"
+def controlla_risultati():
+ultimo = ""
 
-            r = session.get(url, headers=headers, timeout=25)
-            html = r.text
+```
+while True:
+    try:
+        r = requests.get("https://virtual-proxy.snai.it/virtual/results/hgcals-5", timeout=15)
+        dati = r.json()
 
-            import re
-            risultati = re.findall(r'\b\d-\d\b', html)
+        partita = dati["lastEvent"]["score"]
 
-            if risultati:
-                risultato = risultati[0]
+        if partita != ultimo:
+            ultimo = partita
+            manda_messaggio("⚽ Nuovo risultato virtuale: " + partita)
 
-                if risultato != ultimo_risultato:
-                    ultimo_risultato = risultato
+    except Exception as e:
+        print("errore:", e)
 
-                    totale = int(risultato[0]) + int(risultato[2])
+    time.sleep(20)
+```
 
-                    if totale <= 2:
-                        pronostico = "➡️ GIOCA OVER 2.5 ALLA PROSSIMA"
-                    else:
-                        pronostico = "➡️ GIOCA UNDER 2.5 ALLA PROSSIMA"
-
-                    messaggio = f"""⚽ SNAI MITICO FOOTBALL
-Ultimo risultato: {risultato}
-
-{pronostico}"""
-
-                    requests.get(
-                        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                        params={"chat_id": CHAT_ID, "text": messaggio}
-                    )
-
-        except Exception as e:
-            print("errore:", e)
-
-        time.sleep(120)
-
-
-@app.route("/")
+@app.route('/')
 def home():
-    return "BOT VIRTUAL CALCIO ATTIVO"
-
+return "Bot virtuali attivo"
 
 def avvia_bot():
-    t = threading.Thread(target=controlla_virtuale)
-    t.daemon = True
-    t.start()
+t = threading.Thread(target=controlla_risultati)
+t.start()
 
 avvia_bot()
