@@ -1,66 +1,58 @@
-import os
+from flask import Flask, request
 import requests
-from flask import Flask
-from bs4 import BeautifulSoup
-import threading
 import time
-import re
+import threading
 
 app = Flask(__name__)
 
 TOKEN = "8537405775:AAESPuTNwnEAIajnz00P1W6CaDeYo-L3YFs"
 CHAT_ID = "1451965962"
 
-URL = "https://www.snai.it/virtuali/ultimi-risultati/hgcals-5"
-
 ultimo_risultato = ""
 
-def manda_telegram(messaggio):
-    try:
-        requests.get(
-            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-            params={"chat_id": CHAT_ID, "text": messaggio}
-        )
-    except:
-        pass
-
-def analizza_virtuali():
+def controlla_virtuale():
     global ultimo_risultato
+    
     while True:
         try:
-            r = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"})
-            soup = BeautifulSoup(r.text, "html.parser")
-            testo = soup.get_text()
-            risultati = re.findall(r"\d-\d", testo)
+            url = "https://www.snai.it/virtuali/ultimi-risultati/hgcals-5"
+            r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            testo = r.text
+
+            # cerca punteggi tipo 2-1, 3-0 ecc
+            import re
+            risultati = re.findall(r'\d-\d', testo)
 
             if risultati:
-                ultimo = risultati[0]
+                risultato = risultati[0]
 
-                if ultimo != ultimo_risultato:
-                    ultimo_risultato = ultimo
-                    gol = int(ultimo[0]) + int(ultimo[2])
+                if risultato != ultimo_risultato:
+                    ultimo_risultato = risultato
+
+                    gol = int(risultato[0]) + int(risultato[2])
 
                     if gol <= 2:
-                        previsione = "GIOCA OVER 2.5 nella prossima corsa"
+                        pronostico = "➡️ PROSSIMA: OVER 2.5"
                     else:
-                        previsione = "GIOCA UNDER 3.5 nella prossima corsa"
+                        pronostico = "➡️ PROSSIMA: UNDER 2.5"
 
-                    manda_telegram(
-                        f"⚽ MITICO FOOTBALL SNAI\nUltimo risultato: {ultimo}\nConsiglio: {previsione}"
-                    )
+                    messaggio = f"""⚽ SNAI MITICO FOOTBALL
 
-            time.sleep(120)
+Ultimo risultato: {risultato}
+
+{pronostico}
+Giocare alla prossima corsa."""
+
+                    requests.get(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+                                 params={"chat_id": CHAT_ID, "text": messaggio})
 
         except:
-            time.sleep(60)
+            pass
 
-@app.route("/")
+        time.sleep(120)
+
+@app.route("/", methods=["GET"])
 def home():
     return "BOT VIRTUAL CALCIO ATTIVO"
 
-def start_bot():
-    analizza_virtuali()
-
-if __name__ == "__main__":
-    threading.Thread(target=start_bot, daemon=True).start()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+threading.Thread(target=controlla_virtuale).start()
